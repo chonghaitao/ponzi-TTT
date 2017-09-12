@@ -171,4 +171,77 @@ contract('PonziTTT', function(accounts) {
             assert.equal(res.valueOf(), 0, "");
         });
     });
+
+    it("should share balance to fineshed trainees correctly", function() {
+        var ponzi;
+        var before_one, before_two, before_three, after_one, after_two, after_three;
+
+        var trainer = accounts[0];
+        var trainee_one = accounts[1];
+        var trainee_two = accounts[2];
+        var trainee_three = accounts[3];
+
+        return PonziTTT.new([trainer], 4).then(function(instance) {
+            ponzi = instance;
+            return ponzi.register({from: trainee_one, value: web3.toWei(2, 'ether')});
+        }).then(function() {
+            return ponzi.register({from: trainee_two, value: web3.toWei(2, 'ether')});
+        }).then(function() {
+            return ponzi.register({from: trainee_three, value: web3.toWei(2, 'ether')});
+        }).then(function() {
+            return ponzi.isOwner(trainer);
+        }).then(function(res) {
+            assert.equal(res.valueOf(), true, "");
+        }).then(function() {
+            before_one = web3.eth.getBalance(trainee_one);
+            before_two = web3.eth.getBalance(trainee_two);
+            before_three = web3.eth.getBalance(trainee_three);
+            ponzi.confirmOnce(trainee_one, {from: trainer});
+            ponzi.confirmOnce(trainee_one, {from: trainer});
+            ponzi.confirmOnce(trainee_one, {from: trainer});
+            ponzi.confirmOnce(trainee_one, {from: trainer});
+            ponzi.confirmOnce(trainee_two, {from: trainer});
+            ponzi.confirmOnce(trainee_two, {from: trainer});
+            ponzi.confirmOnce(trainee_two, {from: trainer});
+            ponzi.confirmOnce(trainee_two, {from: trainer});
+            return ponzi.isFinished(trainee_one);
+        }).then(function(res) {
+            assert.equal(res.valueOf(), true, "");
+        }).then(function() {
+            return ponzi.isFinished(trainee_two);
+        }).then(function(res) {
+            assert.equal(res.valueOf(), true, "");
+        }).then(function() {
+            return ponzi.setEndTime(0, {from: trainer});
+        //}).then(function(res) {
+            //
+        }).then(function() {
+            return ponzi.shareBalanceToFinishedTrainees();
+        }).then(function() {
+            after_one = web3.eth.getBalance(trainee_one);
+            return ponzi.balanceOf(trainee_one);
+        }).then(function(res) {
+            assert.equal(res.valueOf(), 0, "");
+        }).then(function() {
+            after_two = web3.eth.getBalance(trainee_two);
+            return ponzi.balanceOf(trainee_two);
+        }).then(function(res) {
+            assert.equal(res.valueOf(), 0, "");
+        }).then(function() {
+            after_three = web3.eth.getBalance(trainee_three);
+            return ponzi.balanceOf(trainee_three);
+        }).then(function(res) {
+            assert.equal(res.valueOf(), 0, "");
+        }).then(function(res) {
+            assert.equal(before_one.plus(web3.toWei(3,'ether')).valueOf(), after_one.valueOf(), "");
+        }).then(function(res) {
+            assert.equal(before_two.plus(web3.toWei(3,'ether')).valueOf(), after_two.valueOf(), "");
+        }).then(function(res) {
+            assert.equal(before_three.valueOf(), after_three.valueOf(), "");
+        }).then(function() {
+            return ponzi.checkContractBalance();
+        }).then(function(res) {
+            assert.equal(res.valueOf(), 0, "");
+        });
+    });
 });

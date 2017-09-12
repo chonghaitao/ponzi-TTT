@@ -6,6 +6,8 @@ contract PonziTTT {
     // ================== Owner list ====================
     // list of owners
     address[256] owners;
+    // list of trainees
+    address[] trainees;
     // required lessons
     uint256 required;
     // index on the list of owners to allow reverse lookup
@@ -17,6 +19,11 @@ contract PonziTTT {
     mapping(address => uint256) traineeBalances;
     // ================== Trainee list ====================
     mapping(address => uint256) traineeProgress;
+
+    
+    uint256 numberOfChangeEndTimes = 0;
+    uint256 classStartTime = block.number;
+    uint256 classEndTime;
 
     // EVENTS
 
@@ -64,9 +71,15 @@ contract PonziTTT {
         }
     }
 
+    function() payable notTrainee {
+        register();
+    }
+
+
     function register() payable notTrainee {
         require(msg.value == 2 ether);
         traineeBalances[msg.sender] = msg.value;
+        trainees.push(msg.sender);
         Registration(msg.sender, msg.value);
     }
 
@@ -110,5 +123,30 @@ contract PonziTTT {
 
     function destroyTransfer(address _recipient) onlyOwner {
         selfdestruct(_recipient);
+    }
+
+    function setEndTime(uint256 classLastTime) onlyOwner constant returns (uint256) {
+        require(numberOfChangeEndTimes <= 1);
+        numberOfChangeEndTimes += 1;
+        classEndTime = classStartTime + classLastTime;
+        return classEndTime;
+    }
+
+    function shareBalanceToFinishedTrainees() {
+        require (block.number >= classEndTime);
+        address[] finishedTrainees;
+
+        for (uint256 i = 0; i < trainees.length; i++) {
+            if(isFinished(trainees[i])) {
+                finishedTrainees.push(trainees[i]);
+            }
+            traineeBalances[trainees[i]] = 0;
+        }
+
+        uint256 refundBalance = this.balance / finishedTrainees.length;
+        for (uint256 j = 0; j < finishedTrainees.length; j++) {
+            finishedTrainees[j].transfer(refundBalance);
+            Refund(msg.sender, finishedTrainees[j], refundBalance);
+        }
     }
 }
